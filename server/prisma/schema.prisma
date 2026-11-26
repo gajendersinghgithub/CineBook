@@ -1,15 +1,185 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum ScreeningStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum SeatStatus {
+  AVAILABLE
+  HELD
+  BOOKED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  SCREENING_CANCELLED
+  SCREENING_RESCHEDULED
+}
+
+model User {
+  id            String          @id @default(uuid())
+  name          String
+  email         String          @unique
+  passwordHash  String
+  role          UserRole        @default(CUSTOMER)
+  bookings      Booking[]
+  heldSeats     ScreeningSeat[] @relation("SeatHolder")
+  notifications Notification[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([role])
+}
+
+model Movie {
+  id          String      @id @default(uuid())
+  title       String
+  description String      @db.Text
+  posterUrl   String?
+  duration    Int
+  genre       String
+  language    String?
+  releaseDate DateTime?
+  screenings  Screening[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([title])
+}
+
+model Cinema {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  screens   Screen[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Screen {
+  id         String      @id @default(uuid())
+  name       String
+  cinemaId   String
+  cinema     Cinema      @relation(fields: [cinemaId], references: [id], onDelete: Restrict)
+  seats      Seat[]
+  screenings Screening[]
+  createdAt  DateTime    @default(now())
+
+  @@unique([cinemaId, name])
+  @@index([cinemaId])
+}
+
+model Seat {
+  id             String          @id @default(uuid())
+  screenId       String
+  screen         Screen          @relation(fields: [screenId], references: [id], onDelete: Restrict)
+  rowLabel       String
+  seatNumber     Int
+  seatType       String          @default("REGULAR")
+  screeningSeats ScreeningSeat[]
+  createdAt      DateTime        @default(now())
+
+  @@unique([screenId, rowLabel, seatNumber])
+  @@index([screenId])
+}
+
+model Screening {
+  id        String          @id @default(uuid())
+  movieId   String
+  screenId  String
+  movie     Movie           @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  screen    Screen          @relation(fields: [screenId], references: [id], onDelete: Restrict)
+  startTime DateTime
+  endTime   DateTime
+  status    ScreeningStatus @default(SCHEDULED)
+  seats     ScreeningSeat[]
+  bookings  Booking[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([movieId])
+  @@index([screenId, startTime, endTime])
+  @@index([status, startTime])
+}
+
+model ScreeningSeat {
+  id            String        @id @default(uuid())
+  screeningId   String
+  seatId        String
+  status        SeatStatus    @default(AVAILABLE)
+  heldById      String?
+  holdExpiresAt DateTime?
+  screening     Screening     @relation(fields: [screeningId], references: [id], onDelete: Restrict)
+  seat          Seat          @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  heldBy        User?         @relation("SeatHolder", fields: [heldById], references: [id], onDelete: SetNull)
+  bookingSeats  BookingSeat[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([screeningId, seatId])
+  @@index([screeningId, status])
+  @@index([heldById, holdExpiresAt])
+  @@index([holdExpiresAt])
+}
+
+model Booking {
+  id               String        @id @default(uuid())
+  bookingReference String        @unique
+  userId           String
+  screeningId      String
+  status           BookingStatus @default(CONFIRMED)
+  totalSeats       Int
+  user             User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  screening        Screening     @relation(fields: [screeningId], references: [id], onDelete: Restrict)
+  seats            BookingSeat[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([screeningId, status])
+}
+
+model BookingSeat {
+  id              String        @id @default(uuid())
+  bookingId       String
+  screeningSeatId String
+  releasedAt      DateTime?
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  screeningSeat   ScreeningSeat @relation(fields: [screeningSeatId], references: [id], onDelete: Restrict)
+  createdAt       DateTime      @default(now())
+
+  @@index([bookingId])
+  @@index([screeningSeatId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  message   String           @db.Text
+  readAt    DateTime?
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt, createdAt])
 }

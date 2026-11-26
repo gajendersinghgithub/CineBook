@@ -4,10 +4,30 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  font-family: Inter, system-ui, sans-serif;
-  background: #080b12;
-  color: #f8fafc;
+  min-height: 100vh;
+  background: #090a0e;
+  color: #f5f4f1;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #e9b95e;
+  outline-offset: 3px;
+}
+
+::selection {
+  background: #e9b95e;
+  color: #111;
 }

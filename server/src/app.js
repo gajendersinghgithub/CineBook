@@ -1,0 +1,30 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const helmet_1 = __importDefault(require("helmet"));
+const auth_routes_1 = __importDefault(require("./modules/auth/auth.routes"));
+const catalog_routes_1 = __importDefault(require("./modules/catalog/catalog.routes"));
+const bookings_routes_1 = __importDefault(require("./modules/bookings/bookings.routes"));
+const app = (0, express_1.default)();
+app.use((0, helmet_1.default)());
+app.use((0, cors_1.default)({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+}));
+app.use(express_1.default.json({ limit: "1mb" }));
+app.get("/api/health", (_req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "CineBook API is running",
+        timestamp: new Date().toISOString(),
+    });
+});
+app.use("/api/auth", auth_routes_1.default);
+app.use("/api", catalog_routes_1.default);
+app.use("/api", bookings_routes_1.default);
+exports.default = app;
+//# sourceMappingURL=app.js.map
