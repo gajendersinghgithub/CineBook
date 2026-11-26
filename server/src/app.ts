@@ -19,11 +19,12 @@ app.use(
 
 app.use(express.json({ limit: "1mb" }));
 
-app.get("/api/health", (_req, res) => {
+app.get("/", (_req, res) => {
     res.status(200).json({
         success: true,
-        message: "CineBook API is running",
-        timestamp: new Date().toISOString(),
+        message: "Welcome to CineBook API",
+        status: "running",
+        health: "/api/health",
     });
 });
 
